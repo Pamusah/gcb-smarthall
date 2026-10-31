@@ -9,19 +9,24 @@ import {
   Smartphone,
   Headphones,
   Clock3,
-  ShieldCheck
+  ShieldCheck,
+  Ticket,
+  UserRound,
+  CheckCircle2,
+  RotateCcw
 } from 'lucide-react'
 
 import PageHeader from '../../components/common/PageHeader'
 import ServiceCard from '../../components/self-service/ServiceCard'
 import PrimaryButton from '../../components/common/PrimaryButton'
 import TransactionSelection from '../../components/self-service/TransactionSelection'
+import serviceRouting from '../../constants/serviceRouting'
 
 function SelfServicePage() {
-
   const [selectedService, setSelectedService] = useState(null)
   const [showTransactions, setShowTransactions] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState(null)
+  const [routeResult, setRouteResult] = useState(null)
 
   const services = [
     {
@@ -79,24 +84,35 @@ function SelfServicePage() {
   const handleProceed = () => {
     if (!selectedTransaction) return
 
-    console.log('Customer selection:', {
+    const route = serviceRouting[selectedTransaction]
+
+    if (!route) {
+      console.error('No routing configuration found.')
+      return
+    }
+
+    setRouteResult({
+      type: route,
       service: selectedService,
       transaction: selectedTransaction
     })
   }
 
+  const handleStartAgain = () => {
+    setSelectedService(null)
+    setSelectedTransaction(null)
+    setShowTransactions(false)
+    setRouteResult(null)
+  }
+
   return (
     <div className="min-h-screen bg-gcb-light">
-
-      {/* Navigation */}
       <nav className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-10">
-
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gcb-amber font-extrabold text-gcb-charcoal">
               G
             </div>
-
             <div>
               <h2 className="text-lg font-extrabold text-gcb-charcoal">
                 GCB SmartHall
@@ -113,136 +129,238 @@ function SelfServicePage() {
               Customer Self-Service
             </span>
           </div>
-
         </div>
       </nav>
 
-      {/* Main Content */}
       <main className="mx-auto max-w-7xl px-6 py-12 lg:px-10 lg:py-16">
 
-        <PageHeader
-          title="How can we help you today?"
-          subtitle="Welcome to GCB SmartHall. Select the banking service you require to get started."
-        />
-
-        {!showTransactions ? (
-
-          /* Stage 1: Service Selection */
-          <section>
-
-            <div className="mb-7 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-              <div>
-                <h2 className="text-xl font-bold text-gcb-charcoal">
-                  Available Services
-                </h2>
-                <p className="mt-1 text-sm text-gcb-grey">
-                  Choose a service below to continue.
-                </p>
-              </div>
-
-              <span className="text-sm font-medium text-gcb-grey">
-                {services.length} services available
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-
-              {services.map((service, index) => (
-                <div
-                  key={service.title}
-                  className="animate-card-in"
-                  style={{ animationDelay: `${index * 80}ms` }}
-                >
-                  <ServiceCard
-                    title={service.title}
-                    description={service.description}
-                    icon={service.icon}
-                    selected={selectedService === service.title}
-                    onClick={() => handleServiceSelection(service.title)}
-                  />
-                </div>
-              ))}
-
-            </div>
-
-            {selectedService && (
-              <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-5 animate-fade-in">
-                <p className="text-sm text-gcb-grey">
-                  Your selected service
-                </p>
-                <h3 className="mt-1 text-lg font-bold text-gcb-charcoal">
-                  {selectedService}
-                </h3>
-              </div>
-            )}
-
-            <div className="mt-10 flex justify-end">
-              <PrimaryButton
-                onClick={handleContinue}
-                disabled={!selectedService}
-              >
-                Continue
-              </PrimaryButton>
-            </div>
-
-          </section>
-
-        ) : (
-
-          /* Stage 2: Transaction Selection */
-          <section>
-            <TransactionSelection
-              service={selectedService}
-              onSelect={handleTransactionSelection}
-              onBack={handleBack}
+        {!routeResult ? (
+          <>
+            <PageHeader
+              title="How can we help you today?"
+              subtitle="Welcome to GCB SmartHall. Select the banking service you require to get started."
             />
 
-            {selectedTransaction && (
-              <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-6 animate-fade-in">
+            {!showTransactions ? (
+              <section>
+                <div className="mb-7 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+                  <div>
+                    <h2 className="text-xl font-bold text-gcb-charcoal">
+                      Available Services
+                    </h2>
+                    <p className="mt-1 text-sm text-gcb-grey">
+                      Choose a service below to continue.
+                    </p>
+                  </div>
 
-                <p className="text-sm text-gcb-grey">
-                  Your selected transaction
-                </p>
-
-                <h3 className="mt-2 text-xl font-bold text-gcb-charcoal">
-                  {selectedTransaction}
-                </h3>
-
-                <p className="mt-1 text-sm text-gcb-grey">
-                  {selectedService}
-                </p>
-
-                <div className="mt-5 flex flex-wrap justify-end gap-3">
-
-                  <button
-                    onClick={() => setSelectedTransaction(null)}
-                    className="rounded-lg border border-gray-300 bg-white px-5 py-3 text-sm font-semibold hover:bg-gray-50"
-                  >
-                    Change selection
-                  </button>
-
-                  <PrimaryButton
-                    onClick={handleProceed}
-                  >
-                    Proceed
-                  </PrimaryButton>
-
+                  <span className="text-sm font-medium text-gcb-grey">
+                    {services.length} services available
+                  </span>
                 </div>
 
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {services.map((service, index) => (
+                    <div
+                      key={service.title}
+                      className="animate-card-in"
+                      style={{ animationDelay: `${index * 80}ms` }}
+                    >
+                      <ServiceCard
+                        title={service.title}
+                        description={service.description}
+                        icon={service.icon}
+                        selected={selectedService === service.title}
+                        onClick={() => handleServiceSelection(service.title)}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {selectedService && (
+                  <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-5 animate-fade-in">
+                    <p className="text-sm text-gcb-grey">
+                      Your selected service
+                    </p>
+                    <h3 className="mt-1 text-lg font-bold text-gcb-charcoal">
+                      {selectedService}
+                    </h3>
+                  </div>
+                )}
+
+                <div className="mt-10 flex justify-end">
+                  <PrimaryButton
+                    onClick={handleContinue}
+                    disabled={!selectedService}
+                  >
+                    Continue
+                  </PrimaryButton>
+                </div>
+              </section>
+            ) : (
+              <section>
+                <TransactionSelection
+                  service={selectedService}
+                  onSelect={handleTransactionSelection}
+                  onBack={handleBack}
+                />
+
+                {selectedTransaction && (
+                  <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50 p-6 animate-fade-in">
+                    <p className="text-sm text-gcb-grey">
+                      Your selected transaction
+                    </p>
+
+                    <h3 className="mt-2 text-xl font-bold text-gcb-charcoal">
+                      {selectedTransaction}
+                    </h3>
+
+                    <p className="mt-1 text-sm text-gcb-grey">
+                      {selectedService}
+                    </p>
+
+                    <div className="mt-5 flex flex-wrap justify-end gap-3">
+                      <button
+                        onClick={() => setSelectedTransaction(null)}
+                        className="rounded-lg border border-gray-300 bg-white px-5 py-3 text-sm font-semibold hover:bg-gray-50"
+                      >
+                        Change selection
+                      </button>
+
+                      <PrimaryButton onClick={handleProceed}>
+                        Proceed
+                      </PrimaryButton>
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+          </>
+        ) : (
+          <section className="mx-auto max-w-2xl animate-fade-in">
+            {routeResult.type === 'staff' ? (
+              <div className="rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm sm:p-12">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-green-50 text-green-700">
+                  <CheckCircle2 size={34} />
+                </div>
+
+                <p className="mt-6 text-sm font-bold uppercase tracking-wider text-green-700">
+                  Queue registration successful
+                </p>
+
+                <h2 className="mt-3 text-3xl font-extrabold text-gcb-charcoal">
+                  Your service request is registered
+                </h2>
+
+                <p className="mt-3 text-sm leading-6 text-gcb-grey">
+                  Please wait for your assigned teller to attend to you.
+                </p>
+
+                <div className="my-8 rounded-2xl bg-gcb-light p-6">
+                  <Ticket size={30} className="mx-auto text-amber-700" />
+
+                  <p className="mt-3 text-xs font-semibold uppercase tracking-widest text-gcb-grey">
+                    Demo queue ticket
+                  </p>
+
+                  <p className="mt-2 text-5xl font-extrabold text-gcb-charcoal">
+                    D-015
+                  </p>
+
+                  <div className="mt-6 border-t border-gray-200 pt-5">
+                    <div className="flex items-center justify-center gap-2 text-gcb-charcoal">
+                      <UserRound size={20} />
+                      <span className="font-bold">Assigned Teller: Teller 02</span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-xs text-gcb-grey">
+                  {routeResult.transaction} · {routeResult.service}
+                </p>
+
+                <p className="mt-4 text-xs text-amber-700">
+                  Demonstration only. Ticket and teller assignment are simulated.
+                </p>
+
+                <div className="mt-8">
+                  <PrimaryButton onClick={handleStartAgain}>
+                    <span className="flex items-center gap-2">
+                      <RotateCcw size={17} />
+                      Start again
+                    </span>
+                  </PrimaryButton>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm sm:p-12">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+                  <Smartphone size={34} />
+                </div>
+
+                <p className="mt-6 text-sm font-bold uppercase tracking-wider text-amber-700">
+                  Digital self-service
+                </p>
+
+                <h2 className="mt-3 text-3xl font-extrabold text-gcb-charcoal">
+                  Let's get you started
+                </h2>
+
+                <p className="mt-3 text-sm leading-6 text-gcb-grey">
+                  You selected {routeResult.transaction}.
+                  Follow the guidance below to explore GCB digital banking.
+                </p>
+
+                <div className="mt-8 space-y-4">
+                  <div className="rounded-xl bg-gcb-light p-5">
+                    <h3 className="font-bold text-gcb-charcoal">
+                      Step 1: Open the GCB Mobile App
+                    </h3>
+                    <p className="mt-2 text-sm text-gcb-grey">
+                      Open the official app on your mobile device.
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl bg-gcb-light p-5">
+                    <h3 className="font-bold text-gcb-charcoal">
+                      Step 2: Select your service
+                    </h3>
+                    <p className="mt-2 text-sm text-gcb-grey">
+                      Navigate to the relevant feature and follow the instructions displayed in the app.
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl bg-amber-50 p-5">
+                    <h3 className="font-bold text-gcb-charcoal">
+                      Need assistance?
+                    </h3>
+                    <p className="mt-2 text-sm text-gcb-grey">
+                      A GCB staff member can help you understand the digital service.
+                    </p>
+                  </div>
+                </div>
+
+                <p className="mt-5 text-xs text-gcb-grey">
+                  This is a demonstration guide. No banking transaction has been performed.
+                </p>
+
+                <div className="mt-8">
+                  <PrimaryButton onClick={handleStartAgain}>
+                    <span className="flex items-center gap-2">
+                      <RotateCcw size={17} />
+                      Start again
+                    </span>
+                  </PrimaryButton>
+                </div>
               </div>
             )}
           </section>
-
         )}
 
-        {/* Security Information */}
         <div className="mt-14 grid grid-cols-1 gap-4 border-t border-gray-200 pt-8 sm:grid-cols-2">
-
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm">
               <ShieldCheck size={21} className="text-amber-700" />
             </div>
-
             <div>
               <p className="text-sm font-bold text-gcb-charcoal">
                 Your security matters
@@ -257,7 +375,6 @@ function SelfServicePage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm">
               <Clock3 size={21} className="text-amber-700" />
             </div>
-
             <div>
               <p className="text-sm font-bold text-gcb-charcoal">
                 Faster branch experience
@@ -267,18 +384,14 @@ function SelfServicePage() {
               </p>
             </div>
           </div>
-
         </div>
-
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-gray-200 bg-white px-6 py-5 text-center">
         <p className="text-xs text-gcb-grey">
           GCB SmartHall · Queue, Learn & Serve
         </p>
       </footer>
-
     </div>
   )
 }

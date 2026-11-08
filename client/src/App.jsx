@@ -1,8 +1,11 @@
 
 import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-
+import TellerOperationsPage from './pages/TellerOperations/TellerOperationsPage'
 import SelfServicePage from './pages/SelfService/SelfServicePage'
+import QueueDisplayPage from './pages/QueueDisplay/QueueDisplayPage'
+import SmartLearnPage from './pages/SmartLearn/SmartLearnPage'
+
 import { checkApiHealth } from './services/api'
 
 function App() {
@@ -29,8 +32,30 @@ function App() {
       </div>
 
       <Routes>
-        <Route path="/" element={<Navigate to="/self-service" replace />} />
-        <Route path="/self-service" element={<SelfServicePage />} />
+        <Route
+          path="/"
+          element={<Navigate to="/self-service" replace />}
+        />
+
+        <Route
+          path="/self-service"
+          element={<SelfServicePage />}
+        />
+
+        <Route
+          path="/queue-display"
+          element={<QueueDisplayPage />}
+        />
+
+        <Route
+  path="/teller"
+  element={<TellerOperationsPage />}
+/>
+
+        <Route
+          path="/smart-learn"
+          element={<SmartLearnPage />}
+        />
       </Routes>
     </>
   )

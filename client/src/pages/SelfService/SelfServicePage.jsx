@@ -21,12 +21,16 @@ import ServiceCard from '../../components/self-service/ServiceCard'
 import PrimaryButton from '../../components/common/PrimaryButton'
 import TransactionSelection from '../../components/self-service/TransactionSelection'
 import serviceRouting from '../../constants/serviceRouting'
+import { registerQueue } from '../../services/api'
 
 function SelfServicePage() {
   const [selectedService, setSelectedService] = useState(null)
   const [showTransactions, setShowTransactions] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState(null)
   const [routeResult, setRouteResult] = useState(null)
+
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submissionError, setSubmissionError] = useState('')
 
   const services = [
     {
@@ -69,33 +73,70 @@ function SelfServicePage() {
     if (!selectedService) return
 
     setSelectedTransaction(null)
+    setSubmissionError('')
     setShowTransactions(true)
   }
 
   const handleTransactionSelection = (transaction) => {
     setSelectedTransaction(transaction)
+    setSubmissionError('')
   }
 
   const handleBack = () => {
     setShowTransactions(false)
     setSelectedTransaction(null)
+    setSubmissionError('')
   }
 
-  const handleProceed = () => {
-    if (!selectedTransaction) return
+  // Register customer or direct to digital self-service
+  const handleProceed = async () => {
+    if (!selectedTransaction || isSubmitting) return
 
     const route = serviceRouting[selectedTransaction]
 
     if (!route) {
-      console.error('No routing configuration found.')
+      setSubmissionError('This service is not currently configured.')
       return
     }
 
-    setRouteResult({
-      type: route,
-      service: selectedService,
-      transaction: selectedTransaction
-    })
+    // Digital services do not require queue registration
+    if (route === 'digital') {
+      setRouteResult({
+        type: 'digital',
+        service: selectedService,
+        transaction: selectedTransaction
+      })
+
+      return
+    }
+
+    // Register teller service through the backend
+    setIsSubmitting(true)
+    setSubmissionError('')
+
+    try {
+      const response = await registerQueue({
+        service: selectedService,
+        transaction: selectedTransaction
+      })
+
+      setRouteResult({
+        type: 'staff',
+        service: selectedService,
+        transaction: selectedTransaction,
+        ticket: response.data
+      })
+
+    } catch (error) {
+      console.error('Queue registration failed:', error)
+
+      setSubmissionError(
+        error.message || 'Unable to register your queue ticket.'
+      )
+
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleStartAgain = () => {
@@ -103,16 +144,19 @@ function SelfServicePage() {
     setSelectedTransaction(null)
     setShowTransactions(false)
     setRouteResult(null)
+    setSubmissionError('')
   }
 
   return (
     <div className="min-h-screen bg-gcb-light">
+      {/* Navigation */}
       <nav className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 lg:px-10">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gcb-amber font-extrabold text-gcb-charcoal">
               G
             </div>
+
             <div>
               <h2 className="text-lg font-extrabold text-gcb-charcoal">
                 GCB SmartHall
@@ -148,6 +192,7 @@ function SelfServicePage() {
                     <h2 className="text-xl font-bold text-gcb-charcoal">
                       Available Services
                     </h2>
+
                     <p className="mt-1 text-sm text-gcb-grey">
                       Choose a service below to continue.
                     </p>
@@ -181,6 +226,7 @@ function SelfServicePage() {
                     <p className="text-sm text-gcb-grey">
                       Your selected service
                     </p>
+
                     <h3 className="mt-1 text-lg font-bold text-gcb-charcoal">
                       {selectedService}
                     </h3>
@@ -218,16 +264,29 @@ function SelfServicePage() {
                       {selectedService}
                     </p>
 
+                    {submissionError && (
+                      <div className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                        {submissionError}
+                      </div>
+                    )}
+
                     <div className="mt-5 flex flex-wrap justify-end gap-3">
                       <button
-                        onClick={() => setSelectedTransaction(null)}
-                        className="rounded-lg border border-gray-300 bg-white px-5 py-3 text-sm font-semibold hover:bg-gray-50"
+                        onClick={() => {
+                          setSelectedTransaction(null)
+                          setSubmissionError('')
+                        }}
+                        disabled={isSubmitting}
+                        className="rounded-lg border border-gray-300 bg-white px-5 py-3 text-sm font-semibold hover:bg-gray-50 disabled:opacity-50"
                       >
                         Change selection
                       </button>
 
-                      <PrimaryButton onClick={handleProceed}>
-                        Proceed
+                      <PrimaryButton
+                        onClick={handleProceed}
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? 'Registering...' : 'Proceed'}
                       </PrimaryButton>
                     </div>
                   </div>
@@ -237,6 +296,8 @@ function SelfServicePage() {
           </>
         ) : (
           <section className="mx-auto max-w-2xl animate-fade-in">
+
+            {/* Successful queue registration */}
             {routeResult.type === 'staff' ? (
               <div className="rounded-3xl border border-gray-200 bg-white p-8 text-center shadow-sm sm:p-12">
                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-green-50 text-green-700">
@@ -259,17 +320,20 @@ function SelfServicePage() {
                   <Ticket size={30} className="mx-auto text-amber-700" />
 
                   <p className="mt-3 text-xs font-semibold uppercase tracking-widest text-gcb-grey">
-                    Demo queue ticket
+                    Your queue ticket
                   </p>
 
-                  <p className="mt-2 text-5xl font-extrabold text-gcb-charcoal">
-                    D-015
+                  <p className="mt-2 text-3xl font-extrabold text-gcb-charcoal sm:text-5xl">
+                    {routeResult.ticket.ticketId}
                   </p>
 
                   <div className="mt-6 border-t border-gray-200 pt-5">
                     <div className="flex items-center justify-center gap-2 text-gcb-charcoal">
                       <UserRound size={20} />
-                      <span className="font-bold">Assigned Teller: Teller 02</span>
+
+                      <span className="font-bold">
+                        Assigned Teller: {routeResult.ticket.assignedTeller || 'Pending'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -279,7 +343,7 @@ function SelfServicePage() {
                 </p>
 
                 <p className="mt-4 text-xs text-amber-700">
-                  Demonstration only. Ticket and teller assignment are simulated.
+                  Your ticket has been saved in the SmartHall database.
                 </p>
 
                 <div className="mt-8">
@@ -292,6 +356,7 @@ function SelfServicePage() {
                 </div>
               </div>
             ) : (
+              /* Digital self-service */
               <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm sm:p-12">
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
                   <Smartphone size={34} />
@@ -315,6 +380,7 @@ function SelfServicePage() {
                     <h3 className="font-bold text-gcb-charcoal">
                       Step 1: Open the GCB Mobile App
                     </h3>
+
                     <p className="mt-2 text-sm text-gcb-grey">
                       Open the official app on your mobile device.
                     </p>
@@ -324,6 +390,7 @@ function SelfServicePage() {
                     <h3 className="font-bold text-gcb-charcoal">
                       Step 2: Select your service
                     </h3>
+
                     <p className="mt-2 text-sm text-gcb-grey">
                       Navigate to the relevant feature and follow the instructions displayed in the app.
                     </p>
@@ -333,6 +400,7 @@ function SelfServicePage() {
                     <h3 className="font-bold text-gcb-charcoal">
                       Need assistance?
                     </h3>
+
                     <p className="mt-2 text-sm text-gcb-grey">
                       A GCB staff member can help you understand the digital service.
                     </p>
@@ -356,15 +424,18 @@ function SelfServicePage() {
           </section>
         )}
 
+        {/* Security information */}
         <div className="mt-14 grid grid-cols-1 gap-4 border-t border-gray-200 pt-8 sm:grid-cols-2">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm">
               <ShieldCheck size={21} className="text-amber-700" />
             </div>
+
             <div>
               <p className="text-sm font-bold text-gcb-charcoal">
                 Your security matters
               </p>
+
               <p className="text-xs text-gcb-grey">
                 Protect your personal banking information.
               </p>
@@ -375,10 +446,12 @@ function SelfServicePage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm">
               <Clock3 size={21} className="text-amber-700" />
             </div>
+
             <div>
               <p className="text-sm font-bold text-gcb-charcoal">
                 Faster branch experience
               </p>
+
               <p className="text-xs text-gcb-grey">
                 Select your service before joining the queue.
               </p>

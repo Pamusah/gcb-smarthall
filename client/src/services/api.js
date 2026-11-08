@@ -1,5 +1,6 @@
 
-const API_BASE_URL = 'http://localhost:5000/api'
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
 
 // Check backend connection
 export async function checkApiHealth() {
@@ -45,7 +46,6 @@ export async function getQueue(page = 1) {
 
   return result
 }
-
 
 // Call the next customer assigned to a teller
 export async function callNextCustomer(teller) {

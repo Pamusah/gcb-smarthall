@@ -13,8 +13,19 @@ const startDailyQueueCleanup = require('./utils/dailyQueueCleanup')
 const app = express()
 const server = http.createServer(app)
 
+const allowedOrigins = [
+  'http://localhost:5173',
+  process.env.CLIENT_URL
+].filter(Boolean)
+
 const corsOptions = {
-  origin: 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true)
+    }
+
+    return callback(new Error('Origin not allowed by CORS'))
+  },
   methods: ['GET', 'POST', 'PATCH']
 }
 
